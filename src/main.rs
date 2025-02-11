@@ -49,7 +49,7 @@ enum Command {
 
         /// Path to SQLite database
         #[arg(short = 'd', long)]
-        db_path: String,
+        db_path: Option<String>,
     },
 
     /// Find nearby devices within a given radius
@@ -65,7 +65,7 @@ enum Command {
 
         /// Path to SQLite database
         #[arg(short = 'd', long)]
-        db_path: String,
+        db_path: Option<String>,
     },
 
     /// Get the detection history of a device
@@ -75,7 +75,7 @@ enum Command {
 
         /// Path to SQLite database
         #[arg(short = 'd', long)]
-        db_path: String,
+        db_path: Option<String>,
 
         /// Start timestamp (RFC3339 format)
         #[arg(long)]
@@ -133,16 +133,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         Command::Location { address, db_path } => {
-            let tracker = db::BluetoothTracker::new(&db_path)?;
-            match tracker.estimate_device_location(&address)? {
+            let path = db::get_db_path(db_path);
+            let db = db::BluetoothTracker::new(&path)?;
+            match db.estimate_device_location(&address)? {
                 Some((lat, lon)) => println!("Last known location: ({}, {})", lat, lon),
                 None => println!("No location data found for device."),
             }
         }
 
         Command::Nearby { latitude, longitude, radius, db_path } => {
-            let tracker = db::BluetoothTracker::new(&db_path)?;
-            let devices = tracker.find_devices_near(latitude, longitude, radius)?;
+            let path = db::get_db_path(db_path);
+            let db = db::BluetoothTracker::new(&path)?;
+            let devices = db.find_devices_near(latitude, longitude, radius)?;
             if devices.is_empty() {
                 println!("No devices found within {} km.", radius);
             } else {
@@ -160,7 +162,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             end_time,
             limit,
         } => {
-            let mut tracker = db::BluetoothTracker::new(&db_path)?;
+            let path = db::get_db_path(db_path);
+            let mut db = db::BluetoothTracker::new(&path)?;
 
             let filters = db::FilterOptions {
                 start_time: start_time
@@ -174,7 +177,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 limit,
             };
 
-            let history = tracker.get_device_history(&address, filters)?;
+            let history = db.get_device_history(&address, filters)?;
             if history.is_empty() {
                 println!("No history found for device.");
             } else {

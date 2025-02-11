@@ -73,6 +73,7 @@ impl BluetoothTracker {
 
         Ok(Self { conn })
     }
+    
 
     pub fn store_scan_data(&self, scan_data: DeviceScanData) -> Result<()> {
         let now = Utc::now();
@@ -259,4 +260,11 @@ impl BluetoothTracker {
 
         Ok(devices)
     }
+}
+
+pub fn get_db_path(provided_path: Option<String>) -> String {
+    provided_path.unwrap_or_else(|| {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        format!("{}/.bluetooth_tool/bluetooth.db", home)
+    })
 }
