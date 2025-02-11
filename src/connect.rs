@@ -5,7 +5,6 @@ use std::thread;
 use std::time::Duration;
 
 pub async fn connect_to_device(address: &str) -> Result<(), Box<dyn Error>> {
-    // Create the Bluetooth manager and find the first available adapter
     let manager = PlatformManager::new().await?;
     let adapters = manager.adapters().await?;
     let adapter = match adapters.first() {

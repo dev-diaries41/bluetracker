@@ -66,15 +66,30 @@ enum Command {
         address: String,
         
         /// Start timestamp (RFC3339 format)
-        #[arg(long)]
+        #[arg(short, long)]
         start_time: Option<String>,
 
         /// End timestamp (RFC3339 format)
-        #[arg(long)]
+        #[arg(short, long)]
         end_time: Option<String>,
 
         /// Limit the number of results
-        #[arg(long)]
+        #[arg(short, long)]
+        limit: Option<usize>,
+    },
+
+     /// Get the detection history of a device
+     Devices {
+        /// Start timestamp (RFC3339 format)
+        #[arg(short, long)]
+        start_time: Option<String>,
+
+        /// End timestamp (RFC3339 format)
+        #[arg(short, long)]
+        end_time: Option<String>,
+
+        /// Limit the number of results
+        #[arg(short, long)]
         limit: Option<usize>,
     },
 
@@ -173,6 +188,38 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         detection.rssi,
                         detection.tx_power,
                         detection.manufacturer_data
+                    );
+                }
+            }
+        }
+
+
+        Command::Devices {
+            start_time,
+            end_time,
+            limit,
+        } => {
+            let filters = db::FilterOptions {
+                start_time: start_time
+                    .as_deref()
+                    .map(|s| DateTime::parse_from_rfc3339(s).ok().map(|dt| dt.with_timezone(&Utc)))
+                    .flatten(),
+                end_time: end_time
+                    .as_deref()
+                    .map(|s| DateTime::parse_from_rfc3339(s).ok().map(|dt| dt.with_timezone(&Utc)))
+                    .flatten(),
+                limit,
+            };
+
+            let devices = db.get_devices(filters)?;
+            if devices.is_empty() {
+                println!("No devices found.");
+            } else {
+                println!("Stored devices for {}:",  devices.len());
+                for device in devices {
+                    println!("- Address: {}, Name: {}",
+                        device.address,
+                        device.name,
                     );
                 }
             }

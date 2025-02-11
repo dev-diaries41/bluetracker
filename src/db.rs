@@ -213,6 +213,31 @@ impl BluetoothTracker {
         history
     }
 
+    pub fn get_devices(&mut self, filters: FilterOptions) -> Result<Vec<DeviceEntry>> {
+        let mut query = String::from(
+            "SELECT address, name FROM devices WHERE 1=1"
+        );
+    
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        
+        let lim = filters.limit.unwrap_or(50);
+        query.push_str(" LIMIT ?");
+        params.push(Box::new(lim as i64));
+    
+        let mut stmt = self.conn.prepare(&query)?;
+        let rows = stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| {
+            Ok(DeviceEntry {
+                address: row.get(0)?,
+                name: row.get(1)?,
+                detections: Vec::new(), // Empty list instead of omitting
+            })
+        })?;
+    
+        let devices: Result<Vec<_>> = rows.collect();
+        devices
+    }
+    
+
     pub fn estimate_device_location(&self, address: &str) -> Result<Option<(f64, f64)>> {
         let mut stmt = self.conn.prepare(
             "SELECT latitude, longitude 
