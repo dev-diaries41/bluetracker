@@ -67,7 +67,7 @@ bluetracker history --address 00:1A:7D:DA:71:13 --db-path bluetooth.db --start-t
 ```
 
 ### Find Manufacturer Name
-Find the manufacturer name from an ID.
+Find the manufacturer name from an ID. This uses the csv file in `assets/manufacturer_names.csv`. You can add additional manufacturers if required.
 ```sh
 bluetracker brand --id 1234
 ```

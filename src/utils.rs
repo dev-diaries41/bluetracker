@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::error::Error;
 use csv::ReaderBuilder;
 use regex::Regex;
+use sha2::{Sha256, Digest};
+use hex;
 
 pub fn load_manufacturer_map_from_csv(csv_path: &str) -> Result<HashMap<String, String>, Box<dyn Error>> {
     let mut rdr = ReaderBuilder::new().has_headers(true).from_path(csv_path)?;
@@ -60,3 +62,11 @@ pub fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     EARTH_RADIUS_KM * c
 }
 
+
+
+/// Hashes a string (e.g., device address) using SHA-256.
+pub fn hash_data(data: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    hex::encode(hasher.finalize()) // Convert to hex string
+}

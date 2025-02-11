@@ -8,11 +8,11 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use chrono::Local;
 
-use crate::db::{BluetoothTracker, DeviceScanData};
+use crate::db::{BluetoothTracker, DeviceScanData, get_db_path};
 
 pub struct ScanOptions {
     pub outpath: Option<String>,  // File output path (optional)
-    pub db_path: Option<String>,  // SQLite DB path (optional)
+    pub use_db: bool,  // Use database if true
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
 }
@@ -35,8 +35,12 @@ pub async fn scan_devices(options: ScanOptions) -> Result<Vec<DeviceScanData>, B
     let devices = central.peripherals().await?;
     let mut device_list = Vec::new();
 
-    // Initialize db if db_path is provided
-    let db = options.db_path.as_ref().map(|db_path| BluetoothTracker::new(db_path)).transpose()?;
+    // Only initialize the database if use_db is true
+    let db = if options.use_db {
+        Some(BluetoothTracker::new(&get_db_path(None))?)
+    } else {
+        None
+    };
 
     if devices.is_empty() {
         println!("No devices found.");
@@ -56,8 +60,8 @@ pub async fn scan_devices(options: ScanOptions) -> Result<Vec<DeviceScanData>, B
                     } else {
                         format!("{:?}", props.manufacturer_data)
                     },
-                    latitude: options.latitude.unwrap_or(0.0),
-                    longitude: options.longitude.unwrap_or(0.0),
+                    latitude: options.latitude,
+                    longitude: options.longitude,
                 };
 
                 println!("{:?}", device_data);
@@ -65,6 +69,7 @@ pub async fn scan_devices(options: ScanOptions) -> Result<Vec<DeviceScanData>, B
             }
         }
 
+        // Store scan results in the database only if it's enabled
         if let Some(mut db) = db {
             db.store_scan_data_batch(&device_list)?;
         }
@@ -76,7 +81,6 @@ pub async fn scan_devices(options: ScanOptions) -> Result<Vec<DeviceScanData>, B
 
     Ok(device_list)
 }
-
 
 pub async fn save_device_list(output: &str, device_list: &[DeviceScanData]) -> std::io::Result<()> {
     let timestamp = Local::now().format("%Y%m%d_%H%M%S").to_string();

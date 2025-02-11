@@ -23,9 +23,9 @@ enum Command {
         #[arg(short, long)]
         output: Option<String>,
 
-        /// Path to SQLite database (optional)
-        #[arg(short = 'd', long)]
-        db_path: Option<String>,
+        /// Store in SQLite database
+        #[arg(short = 'd', long, action = clap::ArgAction::SetTrue)]
+        use_db: bool,
 
         /// Latitude coordinate (optional)
         #[arg(long)]
@@ -46,10 +46,6 @@ enum Command {
     Location {
         /// Bluetooth address of the device
         address: String,
-
-        /// Path to SQLite database
-        #[arg(short = 'd', long)]
-        db_path: Option<String>,
     },
 
     /// Find nearby devices within a given radius
@@ -62,21 +58,13 @@ enum Command {
 
         /// Radius in kilometers
         radius: f64,
-
-        /// Path to SQLite database
-        #[arg(short = 'd', long)]
-        db_path: Option<String>,
     },
 
     /// Get the detection history of a device
     History {
         /// Bluetooth address of the device
         address: String,
-
-        /// Path to SQLite database
-        #[arg(short = 'd', long)]
-        db_path: Option<String>,
-
+        
         /// Start timestamp (RFC3339 format)
         #[arg(long)]
         start_time: Option<String>,
@@ -100,17 +88,19 @@ enum Command {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
+    let db_path = db::get_db_path(None);
+    let mut db = db::BluetoothTracker::new(&db_path)?;
 
     match args.command {
         Command::Scan {
             output,
-            db_path,
+            use_db,
             latitude,
             longitude,
         } => {
             let scan_options = scan::ScanOptions {
                 outpath: output,
-                db_path,
+                use_db,
                 latitude,
                 longitude,
             };
@@ -132,18 +122,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
 
-        Command::Location { address, db_path } => {
-            let path = db::get_db_path(db_path);
-            let db = db::BluetoothTracker::new(&path)?;
+        Command::Location { address } => {
+           
             match db.estimate_device_location(&address)? {
                 Some((lat, lon)) => println!("Last known location: ({}, {})", lat, lon),
                 None => println!("No location data found for device."),
             }
         }
 
-        Command::Nearby { latitude, longitude, radius, db_path } => {
-            let path = db::get_db_path(db_path);
-            let db = db::BluetoothTracker::new(&path)?;
+        Command::Nearby { latitude, longitude, radius } => {
             let devices = db.find_devices_near(latitude, longitude, radius)?;
             if devices.is_empty() {
                 println!("No devices found within {} km.", radius);
@@ -157,14 +144,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         Command::History {
             address,
-            db_path,
             start_time,
             end_time,
             limit,
         } => {
-            let path = db::get_db_path(db_path);
-            let mut db = db::BluetoothTracker::new(&path)?;
-
             let filters = db::FilterOptions {
                 start_time: start_time
                     .as_deref()
