@@ -80,6 +80,9 @@ enum Command {
 
      /// Get the detection history of a device
      Devices {
+        /// Manufacturer ID for bluetooth device
+        manufacturer_id: Option<u16>,
+
         /// Start timestamp (RFC3339 format)
         #[arg(short, long)]
         start_time: Option<String>,
@@ -195,6 +198,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 
         Command::Devices {
+            manufacturer_id,
             start_time,
             end_time,
             limit,
@@ -211,7 +215,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 limit,
             };
 
-            let devices = db.get_devices(filters)?;
+            let devices = db.get_devices(filters, manufacturer_id)?;
             if devices.is_empty() {
                 println!("No devices found.");
             } else {

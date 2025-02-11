@@ -218,30 +218,42 @@ impl BluetoothTracker {
         history
     }
 
-    pub fn get_devices(&mut self, filters: FilterOptions) -> Result<Vec<DeviceEntry>> {
-        let mut query = String::from(
-            "SELECT address, name, manufacturer_id FROM devices WHERE 1=1"
-        );
-    
+    pub fn get_devices(
+        &mut self,
+        filters: FilterOptions,
+        manufacturer_id: Option<u16>,
+    ) -> Result<Vec<DeviceEntry>> {
+        // Start with a base query.
+        let mut query = String::from("SELECT address, name, manufacturer_id FROM devices WHERE 1=1");
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        
+    
+        // If a manufacturer_id is provided, add it to the query.
+        if let Some(id) = manufacturer_id {
+            query.push_str(" AND manufacturer_id = ?");
+            params.push(Box::new(id));
+        }
+    
+        // Apply the limit from filters (defaulting to 50 if not specified).
         let lim = filters.limit.unwrap_or(50);
         query.push_str(" LIMIT ?");
         params.push(Box::new(lim as i64));
     
+        // Prepare the statement and map the results.
         let mut stmt = self.conn.prepare(&query)?;
         let rows = stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| {
             Ok(DeviceEntry {
                 address: row.get(0)?,
                 name: row.get(1)?,
                 manufacturer_id: row.get(2)?,
-                detections: Vec::new(), // Empty list instead of omitting
+                detections: Vec::new(),
             })
         })?;
     
-        let devices: Result<Vec<_>> = rows.collect();
-        devices
+        // Collect and return the devices.
+        rows.collect()
     }
+    
+    
     
 
     pub fn estimate_device_location(&self, address: &str) -> Result<Option<(f64, f64)>> {
@@ -299,48 +311,3 @@ pub fn get_db_path(provided_path: Option<String>) -> String {
         format!("{}/.bluetracker/bluetooth_devices.db", home)
     })
 }
-
-
-
-/// Migrates the database to version 2 by updating each device's `manufacturer_id`
-/// based on the most recent detection's `manufacturer_data`.
-// pub fn migrate_to_v2(conn: &mut Connection) -> Result<()> {
-//     let tx = conn.transaction()?;
-
-//     // Retrieve all device addresses in a separate block so the statement is dropped afterward.
-//     let addresses: Vec<String> = {
-//         let mut stmt = tx.prepare("SELECT address FROM devices")?;
-//         let addresses_iter = stmt.query_map([], |row| row.get(0))?;
-//         addresses_iter.collect::<Result<Vec<_>>>()?
-//     };
-
-//     // Iterate over each device address.
-//     for address in addresses {
-//         // Retrieve the most recent detection's manufacturer_data for this device.
-//         let manufacturer_data: Option<String> = {
-//             let mut det_stmt = tx.prepare(
-//                 "SELECT manufacturer_data 
-//                  FROM detections 
-//                  WHERE device_address = ? 
-//                  ORDER BY timestamp DESC 
-//                  LIMIT 1",
-//             )?;
-//             det_stmt
-//                 .query_row(params![address], |row| row.get(0))
-//                 .optional()?
-//         };
-
-//         // If a detection was found, compute the manufacturer_id and update the device.
-//         if let Some(data) = manufacturer_data {
-//             let manufacturer_id = get_manufacturer_id(&data);
-//             tx.execute(
-//                 "UPDATE devices SET manufacturer_id = ? WHERE address = ?",
-//                 params![manufacturer_id, address],
-//             )?;
-//         }
-//     }
-
-//     // All statements are now dropped, so we can safely commit.
-//     tx.commit()?;
-//     Ok(())
-// }
