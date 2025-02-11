@@ -217,9 +217,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             } else {
                 println!("Stored devices for {}:",  devices.len());
                 for device in devices {
-                    println!("- Address: {}, Name: {}",
+                    println!("- Address: {}, Name: {}, Manufacturer Id: {:?}", 
                         device.address,
                         device.name,
+                        device.manufacturer_id
                     );
                 }
             }

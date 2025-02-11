@@ -2,7 +2,7 @@ use rusqlite::{params, Connection, Result, OptionalExtension};
 use chrono::{Utc, DateTime};
 use serde::Serialize;
 
-use crate::utils::haversine_distance;
+use crate::utils::{haversine_distance, get_manufacturer_id};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DeviceScanData {
@@ -23,12 +23,14 @@ pub struct DeviceDetection {
     pub rssi: i32,
     pub tx_power: i32,
     pub manufacturer_data: String,
+    
 }
 
 #[derive(Debug, Clone)]
 pub struct DeviceEntry {
     pub address: String,
     pub name: String, // Device name (default: "Unknown")
+    pub manufacturer_id: Option<u16>,
     pub detections: Vec<DeviceDetection>, // Stores location history
 }
 
@@ -51,7 +53,8 @@ impl BluetoothTracker {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS devices (
                 address TEXT PRIMARY KEY,
-                name TEXT
+                name TEXT,
+                manufacturer_id TEXT
             )",
             [],
         )?;
@@ -95,10 +98,11 @@ impl BluetoothTracker {
         // If device doesn't exist, insert it into the devices table
         if device_name.is_none() {
             self.conn.execute(
-                "INSERT INTO devices (address, name) VALUES (?1, ?2)",
+                "INSERT INTO devices (address, name, manufacturer_id) VALUES (?1, ?2, ?3)",
                 params![
                     scan_data.address,
-                    scan_data.name.clone().unwrap_or_else(|| "Unknown".to_string())
+                    scan_data.name.clone().unwrap_or_else(|| "Unknown".to_string()),
+                    get_manufacturer_id(&scan_data.manufacturer_data)
                 ],
             )?;
         }
@@ -144,10 +148,11 @@ impl BluetoothTracker {
             // Insert device if it doesn't exist
             if device_name.is_none() {
                 transaction.execute(
-                    "INSERT INTO devices (address, name) VALUES (?1, ?2)",
+                    "INSERT INTO devices (address, name, manufacturer_id) VALUES (?1, ?2, ?3)",
                     params![
                         scan_data.address,
-                        scan_data.name.clone().unwrap_or_else(|| "Unknown".to_string())
+                        scan_data.name.clone().unwrap_or_else(|| "Unknown".to_string()),
+                        get_manufacturer_id(&scan_data.manufacturer_data)
                     ],
                 )?;
             }
@@ -215,7 +220,7 @@ impl BluetoothTracker {
 
     pub fn get_devices(&mut self, filters: FilterOptions) -> Result<Vec<DeviceEntry>> {
         let mut query = String::from(
-            "SELECT address, name FROM devices WHERE 1=1"
+            "SELECT address, name, manufacturer_id FROM devices WHERE 1=1"
         );
     
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
@@ -229,6 +234,7 @@ impl BluetoothTracker {
             Ok(DeviceEntry {
                 address: row.get(0)?,
                 name: row.get(1)?,
+                manufacturer_id: row.get(2)?,
                 detections: Vec::new(), // Empty list instead of omitting
             })
         })?;
@@ -293,3 +299,48 @@ pub fn get_db_path(provided_path: Option<String>) -> String {
         format!("{}/.bluetracker/bluetooth_devices.db", home)
     })
 }
+
+
+
+/// Migrates the database to version 2 by updating each device's `manufacturer_id`
+/// based on the most recent detection's `manufacturer_data`.
+// pub fn migrate_to_v2(conn: &mut Connection) -> Result<()> {
+//     let tx = conn.transaction()?;
+
+//     // Retrieve all device addresses in a separate block so the statement is dropped afterward.
+//     let addresses: Vec<String> = {
+//         let mut stmt = tx.prepare("SELECT address FROM devices")?;
+//         let addresses_iter = stmt.query_map([], |row| row.get(0))?;
+//         addresses_iter.collect::<Result<Vec<_>>>()?
+//     };
+
+//     // Iterate over each device address.
+//     for address in addresses {
+//         // Retrieve the most recent detection's manufacturer_data for this device.
+//         let manufacturer_data: Option<String> = {
+//             let mut det_stmt = tx.prepare(
+//                 "SELECT manufacturer_data 
+//                  FROM detections 
+//                  WHERE device_address = ? 
+//                  ORDER BY timestamp DESC 
+//                  LIMIT 1",
+//             )?;
+//             det_stmt
+//                 .query_row(params![address], |row| row.get(0))
+//                 .optional()?
+//         };
+
+//         // If a detection was found, compute the manufacturer_id and update the device.
+//         if let Some(data) = manufacturer_data {
+//             let manufacturer_id = get_manufacturer_id(&data);
+//             tx.execute(
+//                 "UPDATE devices SET manufacturer_id = ? WHERE address = ?",
+//                 params![manufacturer_id, address],
+//             )?;
+//         }
+//     }
+
+//     // All statements are now dropped, so we can safely commit.
+//     tx.commit()?;
+//     Ok(())
+// }
