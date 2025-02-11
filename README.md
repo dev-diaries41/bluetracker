@@ -12,17 +12,21 @@
    - [Find Manufacturer Name](#find-manufacturer-name)
 4. [Global Tracking & GPS Integration](#global-tracking--gps-integration)
 5. [Database](#database)
-6. [Dependencies](#dependencies)
-7. [License](#license)
+6. [License](#license)
 
 ## Introduction
 The BlueTracker CLI tool allows users to scan for Bluetooth devices, connect to them, track their location, and retrieve history data. The tool integrates SQLite for persistent storage of Bluetooth device detections.
+Here's the updated **Installation** section with the quick installation method included:
+
+---
 
 ## Installation
+
+### Option 1: Manual Installation
 1. Clone the repository:
    ```sh
-   git clone https://github.com/your-repo/bluetracker-cli-tool.git
-   cd bluetracker-cli-tool
+   git clone https://github.com/dev-diaries41/bluetracker.git
+   cd bluetracker
    ```
 2. Install dependencies:
    ```sh
@@ -33,44 +37,46 @@ The BlueTracker CLI tool allows users to scan for Bluetooth devices, connect to 
    ./target/release/bluetracker --help
    ```
 
+### Option 2: Quick Installation (Using Install Script)
+1. Clone the repository:
+   ```sh
+   git clone https://github.com/dev-diaries41/bluetracker.git
+   cd bluetracker
+   ```
+2. Make the install script executable:
+   ```sh
+   chmod 755 install.sh
+   ```
+3. Run the install script:
+   ```sh
+   ./install.sh
+   ```
+4. Run the tool:
+   ```sh
+   blet --help
+   ```
+
+---
+
 ## Usage
-The CLI supports multiple commands:
 
-### Scan for Devices
-Scan for Bluetooth devices and optionally store the results in a file or database.
-```sh
-bluetracker scan --output devices.json --db-path bluetooth.db --latitude 37.7749 --longitude -122.4194
-```
+**`blet <COMMAND>`**
 
-### Connect to a Device
-Connect to a specific Bluetooth device by its address.
-```sh
-bluetracker connect 00:1A:7D:DA:71:13
-```
+### Commands:
+- **scan**: Scan for Bluetooth devices
+- **connect**: Connect to a Bluetooth device by address
+- **location**: Get the last known location of a device
+- **nearby**: Find nearby devices within a given radius
+- **history**: Get the detection history of a device
+- **devices**: Get the detection history of a device
+- **brand**: Find the manufacturer name
+- **help**: Print this message or the help of the given subcommand(s)
 
-### Get Last Known Location
-Retrieve the last known location of a Bluetooth device.
-```sh
-bluetracker location --address 00:1A:7D:DA:71:13 --db-path bluetooth.db
-```
+### Options:
+- `-h`, `--help`: Print help
+- `-V`, `--version`: Print version
 
-### Find Nearby Devices
-Find Bluetooth devices within a specific radius.
-```sh
-bluetracker nearby --latitude 37.7749 --longitude -122.4194 --radius 5 --db-path bluetooth.db
-```
-
-### Get Device History
-Retrieve the detection history of a Bluetooth device.
-```sh
-bluetracker history --address 00:1A:7D:DA:71:13 --db-path bluetooth.db --start-time "2024-01-01T00:00:00Z" --end-time "2024-01-31T23:59:59Z" --limit 50
-```
-
-### Find Manufacturer Name
-Find the manufacturer name from an ID. This uses the csv file in `assets/manufacturer_names.csv`. You can add additional manufacturers if required.
-```sh
-bluetracker brand --id 1234
-```
+---
 
 ## Global Tracking & GPS Integration
 To enable **global tracking**, BlueTracker includes **GPS coordinates** with each scan, allowing:
@@ -79,21 +85,19 @@ To enable **global tracking**, BlueTracker includes **GPS coordinates** with eac
 ✅ Identifying **movement patterns** of frequent devices.  
 ✅ Implementing **geo-fencing** for businesses or security use cases.  
 
+---
+
 ### Example Use Cases
 🔵 **Retail Stores** → Track the number of new vs. returning customers.  
 🔵 **Traffic Analytics** → Monitor Bluetooth signals from cars & phones to analyze congestion.  
 🔵 **Security** → Identify unknown devices in **restricted areas**.  
 🔵 **Lost & Found** → Track last seen **locations** of devices over time.  
 
-## Database
-The tool uses an SQLite database to store scan results and history. The database path can be specified using `--db-path` in commands.
+---
 
-## Dependencies
-- Rust
-- tokio (for async runtime)
-- clap (for command-line argument parsing)
-- chrono (for date/time handling)
-- SQLite (for data storage)
+
+## Database
+The tool uses an SQLite database to store scan results and history.
 
 ## License
 This project is licensed under the MIT License.

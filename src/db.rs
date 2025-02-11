@@ -250,9 +250,6 @@ impl BluetoothTracker {
         // Collect and return the devices.
         rows.collect()
     }
-    
-    
-    
 
     pub fn estimate_device_location(&self, address: &str) -> Result<Option<(f64, f64)>> {
         let mut stmt = self.conn.prepare(
