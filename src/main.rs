@@ -166,7 +166,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             } else {
                 println!("Detection history for {}:", address);
                 for detection in history {
-                    println!("- Time: {}, Location: ({}, {}), RSSI: {}, Tx Power: {}, Manufacturer Data: {}",
+                    println!("- Time: {}, Location: ({:?}, {:?}), RSSI: {}, Tx Power: {}, Manufacturer Data: {}",
                         detection.timestamp,
                         detection.latitude,
                         detection.longitude,
