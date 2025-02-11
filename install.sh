@@ -25,4 +25,9 @@ sudo mv target/release/bluetracker /usr/local/bin/blet
 echo "Setting executable permissions..."
 sudo chmod 755 /usr/local/bin/blet
 
+# mkdir ~/.bluetracker/assets/
+echo "Copying assets to ~/.bluetracker/assets/..."
+cp -r ./assets/* ~/.bluetracker/assets/
+
+
 echo "Installation complete! You can now run 'blet' from anywhere."

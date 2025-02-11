@@ -227,13 +227,11 @@ impl BluetoothTracker {
         let mut query = String::from("SELECT address, name, manufacturer_id FROM devices WHERE 1=1");
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     
-        // If a manufacturer_id is provided, add it to the query.
         if let Some(id) = manufacturer_id {
             query.push_str(" AND manufacturer_id = ?");
             params.push(Box::new(id));
         }
     
-        // Apply the limit from filters (defaulting to 50 if not specified).
         let lim = filters.limit.unwrap_or(50);
         query.push_str(" LIMIT ?");
         params.push(Box::new(lim as i64));

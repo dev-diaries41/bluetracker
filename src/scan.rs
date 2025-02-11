@@ -11,8 +11,8 @@ use chrono::Local;
 use crate::db::{BluetoothTracker, DeviceScanData, get_db_path};
 
 pub struct ScanOptions {
-    pub outpath: Option<String>,  // File output path (optional)
-    pub use_db: bool,  // Use database if true
+    pub outpath: Option<String>, 
+    pub use_db: bool,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
 }
@@ -35,7 +35,6 @@ pub async fn scan_devices(options: ScanOptions) -> Result<Vec<DeviceScanData>, B
     let devices = central.peripherals().await?;
     let mut device_list = Vec::new();
 
-    // Only initialize the database if use_db is true
     let db = if options.use_db {
         Some(BluetoothTracker::new(&get_db_path(None))?)
     } else {
@@ -69,7 +68,6 @@ pub async fn scan_devices(options: ScanOptions) -> Result<Vec<DeviceScanData>, B
             }
         }
 
-        // Store scan results in the database only if it's enabled
         if let Some(mut db) = db {
             db.store_scan_data_batch(&device_list)?;
         }

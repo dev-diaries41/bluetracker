@@ -231,7 +231,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         Command::Brand { id } => {
-            let manufacturer_map = utils::load_manufacturer_map_from_csv("/home/fpf/dev/modules/bluetracker/assets/manufacturer_names.csv")?;
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            let path = format!("{}/.bluetracker/assets/manufacturer_names.csv", home);
+            let manufacturer_map = utils::load_manufacturer_map_from_csv(&path)?;
             match utils::get_manufacturer_name(&id, &manufacturer_map) {
                 Some(name) => println!("Manufacturer Name: {}", name),
                 None => println!("Manufacturer Name not found."),
