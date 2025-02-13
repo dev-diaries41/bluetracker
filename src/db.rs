@@ -31,7 +31,7 @@ pub struct DeviceEntry {
     pub address: String,
     pub name: String, // Device name (default: "Unknown")
     pub manufacturer_id: Option<u16>,
-    pub detections: Vec<DeviceDetection>, // Stores location history
+    pub detections: Vec<DeviceDetection>,
 }
 
 #[derive(Debug, Clone)]
@@ -49,7 +49,6 @@ impl BluetoothTracker {
     pub fn new(db_path: &str) -> Result<Self> {
         let conn = Connection::open(db_path)?;
 
-        // Create tables if they don't exist
         conn.execute(
             "CREATE TABLE IF NOT EXISTS devices (
                 address TEXT PRIMARY KEY,
@@ -89,13 +88,11 @@ impl BluetoothTracker {
             manufacturer_data: scan_data.manufacturer_data.clone(),
         };
 
-        // Check if the device exists in the database
         let mut stmt = self.conn.prepare("SELECT name FROM devices WHERE address = ?")?;
         let device_name: Option<String> = stmt
             .query_row(params![scan_data.address], |row| row.get(0))
             .optional()?;
 
-        // If device doesn't exist, insert it into the devices table
         if device_name.is_none() {
             self.conn.execute(
                 "INSERT INTO devices (address, name, manufacturer_id) VALUES (?1, ?2, ?3)",
@@ -107,7 +104,6 @@ impl BluetoothTracker {
             )?;
         }
 
-        // Insert the detection into the detections table
         self.conn.execute(
             "INSERT INTO detections (device_address, timestamp, latitude, longitude, rssi, tx_power, manufacturer_data) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
@@ -218,12 +214,7 @@ impl BluetoothTracker {
         history
     }
 
-    pub fn get_devices(
-        &mut self,
-        filters: FilterOptions,
-        manufacturer_id: Option<u16>,
-    ) -> Result<Vec<DeviceEntry>> {
-        // Start with a base query.
+    pub fn get_devices(&mut self, filters: FilterOptions, manufacturer_id: Option<u16>) -> Result<Vec<DeviceEntry>> {
         let mut query = String::from("SELECT address, name, manufacturer_id FROM devices WHERE 1=1");
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     
@@ -236,7 +227,6 @@ impl BluetoothTracker {
         query.push_str(" LIMIT ?");
         params.push(Box::new(lim as i64));
     
-        // Prepare the statement and map the results.
         let mut stmt = self.conn.prepare(&query)?;
         let rows = stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| {
             Ok(DeviceEntry {
@@ -247,7 +237,6 @@ impl BluetoothTracker {
             })
         })?;
     
-        // Collect and return the devices.
         rows.collect()
     }
 
@@ -273,7 +262,6 @@ impl BluetoothTracker {
     pub fn find_devices_near(&self, latitude: f64, longitude: f64, radius_km: f64) -> Result<Vec<String>> {
         // Bounding box filter for rough pre-selection (1-degree lat/lon ≈ 111 km)
         let lat_range = radius_km / 111.0;
-        // Removed lon_range as it is not used.
         let mut stmt = self.conn.prepare(
             "SELECT DISTINCT device_address, latitude, longitude 
              FROM detections 
