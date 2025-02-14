@@ -5,6 +5,34 @@ use regex::Regex;
 use sha2::{Sha256, Digest};
 use hex;
 
+use serde::{Deserialize, Serialize};
+use serde_yaml;
+use std::fs;
+
+#[derive(Debug, Deserialize, Serialize)]
+struct CompanyIdentifier {
+    value: String,  // YAML uses hex format, store as String to preserve format
+    name: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct YamlRoot {
+    company_identifiers: Vec<CompanyIdentifier>,
+}
+
+pub fn load_manufacturer_map_from_yaml(yaml_path: &str) -> Result<HashMap<String, String>, Box<dyn Error>> {
+    let yaml_content = fs::read_to_string(yaml_path)?;
+    let parsed: YamlRoot = serde_yaml::from_str(&yaml_content)?;
+    
+    let manufacturer_map = parsed
+        .company_identifiers
+        .into_iter()
+        .map(|company| (company.value, company.name))
+        .collect();
+    
+    Ok(manufacturer_map)
+}
+
 pub fn load_manufacturer_map_from_csv(csv_path: &str) -> Result<HashMap<String, String>, Box<dyn Error>> {
     let mut rdr = ReaderBuilder::new().has_headers(true).from_path(csv_path)?;
     let mut manufacturer_map = HashMap::new();
@@ -18,6 +46,8 @@ pub fn load_manufacturer_map_from_csv(csv_path: &str) -> Result<HashMap<String, 
 
     Ok(manufacturer_map)
 }
+
+
 
 pub fn get_manufacturer_id(manufacturer_data: &str) -> Option<u16> {
     if manufacturer_data.is_empty() {
